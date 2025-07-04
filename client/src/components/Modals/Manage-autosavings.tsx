@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 interface ManageAutosavingsProps {
   onClose: () => void;
   onAddToken: () => void;
+  onExtendSafe: () => void;
   onRemoveToken: () => void;
   onDeactivateSafe: () => void;
 }
@@ -12,6 +13,7 @@ export default function ManageAutosavings({
   onAddToken,
   onRemoveToken,
   onDeactivateSafe,
+  onExtendSafe,
 }: ManageAutosavingsProps) {
   console.log("ManageAutosavings component rendered");
 
@@ -46,11 +48,7 @@ export default function ManageAutosavings({
               onAddToken();
             }}>
             <span>Add token to safe</span>
-            <img
-              src="/src/icons/arrow-down.svg"
-              alt="close"
-              className="w-4 h-4"
-            />
+            <img src="/assets/arrow-down.svg" alt="close" className="w-4 h-4" />
           </button>
 
           <button
@@ -61,11 +59,7 @@ export default function ManageAutosavings({
               onRemoveToken();
             }}>
             <span>Remove token from safe</span>
-            <img
-              src="/src/icons/arrow-down.svg"
-              alt="close"
-              className="w-4 h-4"
-            />
+            <img src="/assets/arrow-down.svg" alt="close" className="w-4 h-4" />
           </button>
 
           <button
@@ -76,11 +70,18 @@ export default function ManageAutosavings({
               onDeactivateSafe();
             }}>
             <span>Deactivate safe</span>
-            <img
-              src="/src/icons/arrow-down.svg"
-              alt="close"
-              className="w-4 h-4"
-            />
+            <img src="/assets/arrow-down.svg" alt="close" className="w-4 h-4" />
+          </button>
+
+          <button
+            className="flex w-full items-center justify-between rounded-md bg-[#272727B2] p-4 text-left  mb-2  -700"
+            onClick={(e) => {
+              console.log("Extend safe button clicked");
+              e.stopPropagation();
+              onExtendSafe();
+            }}>
+            <span>Extend safe</span>
+            <img src="/assets/arrow-down.svg" alt="close" className="w-4 h-4" />
           </button>
         </div>
       </div>

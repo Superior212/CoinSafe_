@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getTokenPrice } from "@/lib";
 import { useAutomatedSafeForUser } from "@/hooks/useGetAutomatedSafe";
 import { useActiveAccount } from "thirdweb/react";
+import { getTokenDecimals } from "@/lib/utils";
+// import { useGetAutomatedSavingsDuePlans } from "@/hooks/useGetAutomatedSavingsDuePlans";
 // import { tokenData } from "@/lib/utils";
 
 interface DisplaySafe {
@@ -25,6 +27,11 @@ export default function SavingsCards() {
   const account = useActiveAccount();
   const userAddress = account?.address;
 
+  // const { duePlanDetails } = useGetAutomatedSavingsDuePlans();
+
+  // const hasActiveAutoSavings =
+  //   duePlanDetails?.includes(userAddress as `0x${string}`) || false;
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { safes, isLoading, isError, fetchSafes } = useGetSafes();
   const {
@@ -32,6 +39,12 @@ export default function SavingsCards() {
     isLoading: automatedSafeLoading,
     error: automatedSafeError,
   } = useAutomatedSafeForUser(userAddress as `0x${string}`);
+
+  const hasActiveAutoSavings =
+    details?.tokenDetails?.some(
+      (token: { amountToSave: number }) => token.amountToSave > 0n
+    ) ?? false;
+
   console.log(
     "AUTOMED SAVIMGS>>> ",
     details,
@@ -74,7 +87,9 @@ export default function SavingsCards() {
         safes?.map(async (safe) => {
           const totalAmount = await Promise.all(
             safe.tokenAmounts.map(async (token) => {
-              const tokenAmount = Number(formatUnits(token.amount, 18));
+              const tokenAmount = Number(
+                formatUnits(token.amount, getTokenDecimals(token.token))
+              );
               const usdVal = await getTokenPrice(token.token, tokenAmount);
               return Number(usdVal);
             })
@@ -170,40 +185,44 @@ export default function SavingsCards() {
                 className="flex space-x-4 pb-4 overflow-x-auto hide-scrollbar"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                <button
-                  onClick={() => navigate("/dashboard/vault/auto-safe")}
-                  className="text-left shrink-0 w-[280px] p-6 rounded-lg border border-[#FFFFFF21] transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="text-sm text-gray-400 font-[300]">
-                      {"Auto-savings"}
-                    </div>
-                    <Badge
-                      className={`
+                {hasActiveAutoSavings && (
+                  <button
+                    onClick={() => navigate("/dashboard/vault/auto-safe")}
+                    className="text-left shrink-0 w-[280px] p-6 rounded-lg border border-[#FFFFFF21] transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="text-sm text-gray-400 font-[300]">
+                        {"Auto-savings"}
+                      </div>
+                      <Badge
+                        className={`
                         bg-[#79E7BA33] font-[400] text-[#F1F1F1] rounded-xl flex items-center p-1 px-2 hover:bg-[#79E7BA33]
                       `}
-                    >
-                      {"Locked"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-baseline">
-                    <span className="text-2xl font-[400]">$</span>
-                    <span className="text-2xl font-[400] ml-1">
-                      {Number(
-                        formatUnits(
-                          details?.tokenDetails?.reduce(
-                            (total: any, obj: any) => total + obj.amountSaved,
-                            0n
-                          ),
-                          18
-                        )
-                      ).toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                      }) || 0.0}
-                    </span>
-                    <span className="text-sm text-gray-400 ml-2">USD</span>
-                  </div>
-                </button>
+                      >
+                        {"Locked"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-baseline">
+                      <span className="text-2xl font-[400]">$</span>
+                      <span className="text-2xl font-[400] ml-1">
+                        {Number(
+                          formatUnits(
+                            details?.tokenDetails?.reduce(
+                              (total: any, obj: any) => total + obj.amountSaved,
+                              0n
+                            ),
+                            getTokenDecimals(
+                              details?.tokenDetails?.[0]?.token || "0x"
+                            )
+                          )
+                        ).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                        }) || 0.0}
+                      </span>
+                      <span className="text-sm text-gray-400 ml-2">USD</span>
+                    </div>
+                  </button>
+                )}
 
                 {displaySafes.map((safe) => (
                   <button

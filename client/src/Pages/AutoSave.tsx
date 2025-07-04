@@ -1,30 +1,36 @@
 import { AssetTabs } from "@/components/Asset-tabs";
-import { ExecuteAutomatedSavingsButton } from "@/components/ExecuteAutomatedSavingsButton";
+// import { ExecuteAutomatedSavingsButton } from "@/components/ExecuteAutomatedSavingsButton";
 import AddToken from "@/components/Modals/Add-token";
 import DeactivateSafeModal from "@/components/Modals/Deactivate-safe-modal";
 import ManageAutosavings from "@/components/Modals/Manage-autosavings";
 import RemoveTokenModal from "@/components/Modals/Remove-token-modal";
-import WithdrawEmergencySafe from "@/components/Modals/WithdrawEmergencySafe";
+import UnlockAutoSafeModal from "@/components/Modals/UnlockAutoSafeModal";
+// import UnlockModal from "@/components/Modals/UnlockModal";
+// import WithdrawEmergencySafe from "@/components/Modals/WithdrawEmergencySafe";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClaimableBalanceAutomatedSafe } from "@/hooks/useClaimableBalanceAutomatedSafe";
+import { useClaimAllAutoSafe } from "@/hooks/useClaimAllAutoSafe";
 import { useAutomatedSafeForUser } from "@/hooks/useGetAutomatedSafe";
 import { useGetAutomatedSavingsDuePlans } from "@/hooks/useGetAutomatedSavingsDuePlans";
 import { useGetSafeById } from "@/hooks/useGetSafeById";
-import { tokenSymbol } from "@/utils/displayTokenSymbol";
 import { formatUnits } from "ethers";
-import { ArrowLeft, Badge } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useActiveAccount } from "thirdweb/react";
+import { toast } from "sonner";
+import { CoinsafeDiamondContract } from "@/lib/contract";
+import ExtendSafeModal from "@/components/Modals/extend-safe-modal";
+import { getTokenDecimals } from "@/lib/utils";
 
 const AutoSave = () => {
   const navigate = useNavigate();
   const {
-    safeDetails,
+    // safeDetails,
     isLoading: apiLoading,
     isError,
-    tokenAmounts,
+    // tokenAmounts,
   } = useGetSafeById("911");
   const account = useActiveAccount();
 
@@ -34,6 +40,7 @@ const AutoSave = () => {
   const [showAddTokenModal, setShowAddTokenModal] = useState(false);
   const [showRemoveTokenModal, setShowRemoveTokenModal] = useState(false);
   const [showDeactivateSafeModal, setShowDeactivateSafeModal] = useState(false);
+  const [showExtendSafeModal, setShowExtendSafeModal] = useState(false);
 
   const userAddress = account?.address;
 
@@ -77,6 +84,13 @@ const AutoSave = () => {
     console.log("showDeactivateSafeModal set to:", true);
   };
 
+  const handleExtendSafe = () => {
+    console.log("handleExtendSafe called");
+    setShowManageAutosavings(false);
+    setShowExtendSafeModal(true);
+    console.log("showExtendSafeModal set to:", true);
+  };
+
   // Function to close all modals
   const closeAllModals = () => {
     console.log("Closing all modals");
@@ -84,6 +98,7 @@ const AutoSave = () => {
     setShowAddTokenModal(false);
     setShowRemoveTokenModal(false);
     setShowDeactivateSafeModal(false);
+    setShowExtendSafeModal(false);
   };
 
   // Function to go back to the main autosavings modal
@@ -92,11 +107,34 @@ const AutoSave = () => {
     setShowAddTokenModal(false);
     setShowRemoveTokenModal(false);
     setShowDeactivateSafeModal(false);
+    setShowExtendSafeModal(false);
   };
 
   // const { safes, isLoading, isError, fetchSafes } = useGetSafes();
-  const { details } = useAutomatedSafeForUser(userAddress as `0x${string}`);
+  const { details, isLoading: autoSafeIsLoading } = useAutomatedSafeForUser(
+    userAddress as `0x${string}`
+  );
   const { duePlanDetails } = useGetAutomatedSavingsDuePlans();
+
+  const {
+    claimAllAutoSafe,
+    isLoading: claimAllIsLoading,
+    error: claimAllError,
+  } = useClaimAllAutoSafe({
+    account,
+    coinSafeAddress: CoinsafeDiamondContract.address as `0x${string}`,
+    toast,
+    onSuccess: () => {
+      console.log("Successfully claimed autosafe");
+    },
+    onError: (err) => {
+      console.error("claim error:", err);
+    },
+  });
+
+  useEffect(() => {
+    console.log("Claim Error", claimAllError);
+  }, [claimAllError]);
 
   console.log("Due plans details:", duePlanDetails);
 
@@ -150,42 +188,42 @@ const AutoSave = () => {
   // const milliseconds = Number(seconds) * 1000;
   // const date = new Date(milliseconds);
 
-  function formatDuration(milliseconds: any) {
-    const duration = Number(milliseconds);
-    if (isNaN(duration)) return "Invalid duration";
+  // function formatDuration(milliseconds: any) {
+  //   const duration = Number(milliseconds);
+  //   if (isNaN(duration)) return "Invalid duration";
 
-    const seconds = Math.floor(duration / 1000) % 60;
-    const minutes = Math.floor(duration / (1000 * 60)) % 60;
-    const hours = Math.floor(duration / (1000 * 60 * 60)) % 24;
-    const days = Math.floor(duration / (1000 * 60 * 60 * 24));
+  //   const seconds = Math.floor(duration / 1000) % 60;
+  //   const minutes = Math.floor(duration / (1000 * 60)) % 60;
+  //   const hours = Math.floor(duration / (1000 * 60 * 60)) % 24;
+  //   const days = Math.floor(duration / (1000 * 60 * 60 * 24));
 
-    const parts = [];
-    if (days) parts.push(`${days} day${days > 1 ? "s" : ""}`);
-    if (hours) parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-    if (minutes) parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-    if (seconds || !parts.length)
-      parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
+  //   const parts = [];
+  //   if (days) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+  //   if (hours) parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+  //   if (minutes) parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+  //   if (seconds || !parts.length)
+  //     parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
 
-    return parts.join(", ");
-  }
+  //   return parts.join(", ");
+  // }
 
-  function formatDate(timestamp: any) {
-    const ms = Number(timestamp); // Convert BigInt to Number
-    if (isNaN(ms)) return "Invalid duration";
+  // function formatDate(timestamp: any) {
+  //   const ms = Number(timestamp); // Convert BigInt to Number
+  //   if (isNaN(ms)) return "Invalid duration";
 
-    const now = new Date("2025-05-17T22:55:00+01:00"); // Current date: May 17, 2025, 10:55 PM WAT
-    const futureDate = new Date(now.getTime() + ms);
+  //   const now = new Date("2025-05-17T22:55:00+01:00"); // Current date: May 17, 2025, 10:55 PM WAT
+  //   const futureDate = new Date(now.getTime() + ms);
 
-    return futureDate.toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    });
-  }
+  //   return futureDate.toLocaleString("en-US", {
+  //     year: "numeric",
+  //     month: "long",
+  //     day: "numeric",
+  //     hour: "numeric",
+  //     minute: "2-digit",
+  //     second: "2-digit",
+  //     hour12: true,
+  //   });
+  // }
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
@@ -259,19 +297,28 @@ const AutoSave = () => {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl">Auto Savings</h1>
                   {/* formattedDate = unlockDate.toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }); */}
-                  <Badge className="bg-[#79E7BA33] inline-block px-2 py-2 rounded-[2rem] text-xs">
-                    {details.unlockTime > new Date()
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                  }); */}
+
+                  {/* <Badge className="bg-[#79E7BA33] inline-block px-2 py-2 rounded-[2rem] text-xs">
+                    <div>{`${details.unlockTime}`}</div>
+                  </Badge> */}
+                  {/* {Number(details.unlockTime) * 1000 > Date.now()
                       ? `${Math.ceil(
-                          (details.unlockTime.getTime() -
-                            new Date().getTime()) /
+                          (Number(details.unlockTime) * 1000 - Date.now()) /
+                            (1000 * 60 * 60 * 24)
+                        )} days till unlock`
+                      : "Ready to unlock"} */}
+                  <div className="bg-[#79E7BA33] inline-block px-2 py-2 rounded-[2rem] text-xs">
+                    {Number(details.unlockTime) * 1000 > Date.now()
+                      ? `${Math.ceil(
+                          (Number(details.unlockTime) * 1000 - Date.now()) /
                             (1000 * 60 * 60 * 24)
                         )} days till unlock`
                       : "Ready to unlock"}
-                  </Badge>
+                  </div>
                 </div>
               </div>
               {/* <p className="text-base my-1 ml-[3.3rem] text-gray-300">
@@ -302,7 +349,9 @@ const AutoSave = () => {
                               (total: any, obj: any) => total + obj.amountSaved,
                               0n
                             ),
-                            18
+                            getTokenDecimals(
+                              details?.tokenDetails[0]?.token || ""
+                            )
                           )
                         ).toLocaleString("en-US", {
                           minimumFractionDigits: 2,
@@ -360,7 +409,9 @@ const AutoSave = () => {
                             (total: any, obj: any) => total + obj?.amount,
                             0n
                           ),
-                          18
+                          balances && balances.length > 0
+                            ? getTokenDecimals(balances[0]?.token || "")
+                            : 18 // fallback to 18 decimals if no balances
                         )
                       ).toLocaleString("en-US", {
                         minimumFractionDigits: 2,
@@ -378,8 +429,21 @@ const AutoSave = () => {
                 </div>
                 <div className="flex justify-end gap-2">
                   <button
-                    onClick={() => setShowWithdrawModal(true)}
+                    onClick={claimAllAutoSafe}
                     className="rounded-[100px] px-8 py-[8px] bg-[#3F3F3F99] h-[40px] text-sm text-[#F1F1F1]"
+                    disabled={
+                      Number(
+                        formatUnits(
+                          balances?.reduce(
+                            (total: any, obj: any) => total + obj?.amount,
+                            0n
+                          ),
+                          balances && balances.length > 0
+                            ? getTokenDecimals(balances[0]?.token || "")
+                            : 18 // fallback to 18 decimals if no balances
+                        )
+                      ) == 0 || claimAllIsLoading
+                    }
                   >
                     Withdraw
                   </button>
@@ -395,16 +459,15 @@ const AutoSave = () => {
             <Skeleton className="h-64 w-full rounded-[12px] border-[1px] border-[#FFFFFF17] p-6" />
           </div>
         ) : (
-          safeDetails &&
           details && (
             <div className="py-2">
-              <AssetTabs safeDetails={details} />
+              <AssetTabs safeDetails={details} isLoading={autoSafeIsLoading} />
             </div>
           )
         )}
       </div>
 
-      <div>
+      {/* <div>
         <div className="flex-1 border-[1px] border-[#FFFFFF17] rounded-[12px] p-6 w-full">
           <div className="flex justify-between items-center pb-4"></div>
 
@@ -461,14 +524,6 @@ const AutoSave = () => {
                     })}
                   </span>
                 </div>
-
-                {/* <div>
-                  Start Time: <span>{formatDate(safeDetails?.startTime)}</span>
-                </div>
-
-                <div>
-                  Unlock Time: <span>{formatDate(safeDetails?.unlockTime)}</span>
-                </div> */}
               </div>
             </div>
           ))}
@@ -490,7 +545,7 @@ const AutoSave = () => {
 
       <div>
         <ExecuteAutomatedSavingsButton />
-      </div>
+      </div> */}
 
       {/* Render the appropriate modal based on state */}
       {(() => {
@@ -522,6 +577,7 @@ const AutoSave = () => {
             onAddToken={handleAddToken}
             onRemoveToken={handleRemoveToken}
             onDeactivateSafe={handleDeactivateSafe}
+            onExtendSafe={handleExtendSafe}
           />
         </div>
       )}
@@ -535,25 +591,12 @@ const AutoSave = () => {
         return null;
       })()}
 
-      {showAddTokenModal && (
-        <div
-          className="modal-container"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-          }}
-        >
-          {(() => {
-            console.log("About to render AddTokenModal component");
-            return null;
-          })()}
-          <AddToken onClose={backToManageAutosavings} />
-        </div>
-      )}
+      <AddToken
+        details={details}
+        open={showAddTokenModal}
+        onClose={backToManageAutosavings}
+        onSuccess={closeAllModals}
+      />
 
       {/* Remove Token Modal */}
       {(() => {
@@ -564,25 +607,11 @@ const AutoSave = () => {
         return null;
       })()}
 
-      {showRemoveTokenModal && (
-        <div
-          className="modal-container"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-          }}
-        >
-          {(() => {
-            console.log("About to render RemoveTokenModal component");
-            return null;
-          })()}
-          <RemoveTokenModal onClose={backToManageAutosavings} />
-        </div>
-      )}
+      <RemoveTokenModal
+        onClose={backToManageAutosavings}
+        open={showRemoveTokenModal}
+        closeAllModals={closeAllModals}
+      />
 
       {/* Deactivate Safe Modal */}
       {(() => {
@@ -609,15 +638,56 @@ const AutoSave = () => {
             console.log("About to render DeactivateSafeModal component");
             return null;
           })()}
-          <DeactivateSafeModal onClose={backToManageAutosavings} />
+          <DeactivateSafeModal
+            details={details}
+            onClose={backToManageAutosavings}
+          />
+        </div>
+      )}
+
+      {/* Extend Safe Modal */}
+      {(() => {
+        console.log(
+          "Rendering ExtendSafeModal section, showExtendSafeModal:",
+          showExtendSafeModal
+        );
+        return null;
+      })()}
+
+      {showExtendSafeModal && (
+        <div
+          className="modal-container"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+          }}
+        >
+          {(() => {
+            console.log("About to render DeactivateSafeModal component");
+            return null;
+          })()}
+          <ExtendSafeModal
+            details={details}
+            onClose={backToManageAutosavings}
+            closeAllModals={closeAllModals}
+          />
         </div>
       )}
 
       {showWithdrawModal && (
-        <WithdrawEmergencySafe
-          isWithdrawModalOpen={showWithdrawModal}
-          setIsWithdrawModalOpen={setShowWithdrawModal}
-          AvailableBalance={tokenAmounts}
+        // <WithdrawEmergencySafe
+        //   isWithdrawModalOpen={showWithdrawModal}
+        //   setIsWithdrawModalOpen={setShowWithdrawModal}
+        //   AvailableBalance={tokenAmounts}
+        // />
+        // <UnlockModal onClose={() => setShowWithdrawModal(false)} />
+        <UnlockAutoSafeModal
+          account={account}
+          onClose={() => setShowWithdrawModal(false)}
         />
       )}
     </div>

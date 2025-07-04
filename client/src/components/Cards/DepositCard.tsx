@@ -60,6 +60,7 @@ export default function DepositCard() {
     coinSafeAbi: fundingFacetAbi,
     onSuccess: () => {
       openThirdModal();
+      setSelectedTokenBalance((prev) => prev - (amount || 0));
     },
     onApprove: () => {
       promptApproveModal();
@@ -73,6 +74,13 @@ export default function DepositCard() {
     },
     toast,
   });
+
+  const resetState = () => {
+    setAmount(0);
+    // setToken("");
+    // setTokenPrice("0.00");
+    // setSelectedTokenBalance(0);
+  };
 
   useEffect(() => {
     const updatePrice = async () => {
@@ -123,16 +131,18 @@ export default function DepositCard() {
                 <input
                   type="number"
                   value={amount}
+                  disabled={isLoading}
                   onChange={(e: any) => setAmount(e.target.value)}
                   className="text-2xl font-medium bg-transparent text-white w-16 sm:w-full outline-none"
                   placeholder="0"
                 />
+
                 <div className="text-sm text-left text-gray-400 mt-1">
                   ≈ ${tokenPrice}
                 </div>
               </div>
               <div className="sm:ml-4">
-                <Select onValueChange={handleTokenSelect} value={token}>
+                <Select onValueChange={handleTokenSelect} value={token} disabled={isLoading}>
                   <SelectTrigger className="w-[160px] border border-[#FFFFFF3D] bg-[#3F3F3F99]/60 text-white rounded-md">
                     <div className="flex items-center">
                       <MemoRipple className="mr-2" />
@@ -154,7 +164,7 @@ export default function DepositCard() {
           {/* Wallet Balance Section */}
           {token && (
             <>
-              {amount && amount > selectedTokenBalance && (
+              {amount! > 0 && amount! > selectedTokenBalance && (
                 <p className="text-red-500 text-[13px] mt-1 text-right">
                   Amount greater than wallet balance
                 </p>
@@ -209,7 +219,10 @@ export default function DepositCard() {
         amount={amount || 0}
         token={tokenData[token]?.symbol}
         isOpen={isThirdModalOpen}
-        onClose={() => setIsThirdModalOpen(false)}
+        onClose={() => {
+          setIsThirdModalOpen(false);
+          resetState();
+        }}
         transactionType="deposit"
         additionalDetails={{
           subText: "Assets will be available in your wallet.",

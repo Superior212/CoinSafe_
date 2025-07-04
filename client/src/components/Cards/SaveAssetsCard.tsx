@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, LoaderCircle } from "lucide-react";
-import { cn, tokenData } from "@/lib/utils";
+import { ArrowLeft, Loader2, LoaderCircle } from "lucide-react";
+import { cn, getTokenDecimals, tokenData } from "@/lib/utils";
 import SavingsTargetInput from "../SavingsTargetInput";
 import AmountInput from "../AmountInput";
 import { useRecoilState, useResetRecoilState } from "recoil";
@@ -10,15 +10,15 @@ import { saveAtom } from "@/store/atoms/save";
 import { CoinsafeDiamondContract, tokens } from "@/lib/contract";
 import { DurationSelector } from "../DurationSelector";
 import { format, addDays, differenceInDays, startOfDay } from "date-fns";
-// import { Label } from "../ui/label";
+import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { useCreateAutoSavings } from "@/hooks/useCreateAutoSavings";
 import { useActiveAccount } from "thirdweb/react";
 import targetSavingsFacetAbi from "../../abi/TargetSavingsFacet.json";
@@ -27,7 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSaveAsset } from "@/hooks/useSaveAsset";
 import SuccessfulTxModal from "../Modals/SuccessfulTxModal";
 import SaveSuccessful from "../Modals/SaveSuccessful";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { formatUnits } from "viem";
 import { SafeDetails, useGetSafes } from "@/hooks/useGetSafes";
 import {
@@ -80,9 +80,9 @@ export default function SaveAssetsCard() {
 
   const [, setDecimals] = useState(1);
   const [selectedTokenBalance, setSelectedTokenBalance] = useState(0);
-  const [_checkingAutoSafe, setCheckingAutoSafe] = useState(false);
+  const [checkingAutoSafe, setCheckingAutoSafe] = useState(false);
   const [hasAutoSafe, setHasAutoSafe] = useState(false);
-  const [_autoSafeTokenOptions, setAutoSafeTokenOptions] =
+  const [autoSafeTokenOptions, setAutoSafeTokenOptions] =
     useState(supportedTokens);
   const [savingsBalance] = useRecoilState(savingsBalanceState);
 
@@ -116,11 +116,11 @@ export default function SaveAssetsCard() {
     refetch();
   }, [savingsBalance]);
 
-  const calculateEndDate = (days: number) => {
-    const currentDate = new Date();
-    const futureDate = addDays(currentDate, days);
-    return format(futureDate, "dd MMMM yyyy");
-  };
+    const calculateEndDate = (days: number) => {
+      const currentDate = new Date();
+      const futureDate = addDays(currentDate, days);
+      return format(futureDate, "dd MMMM yyyy");
+    };
 
   const handleDurationChange = (duration: number) => {
     setSavingsDuration(duration);
@@ -167,7 +167,7 @@ export default function SaveAssetsCard() {
   const [selectedSavingsTarget, setSelectedSavingsTarget] =
     useState<SafeDetails | null>(null);
 
-  const [selectedOption, _setSelectedOption] = useState("by-frequency");
+  const [selectedOption, setSelectedOption] = useState("by-frequency");
   const [validationErrors, setValidationErrors] = useState<{
     amount?: string;
     token?: string;
@@ -178,12 +178,7 @@ export default function SaveAssetsCard() {
 
   const handleTokenSelect = (value: string) => {
     // SAFU & LSK check
-    if (value == tokens.safu || value == tokens.lsk) {
-      setDecimals(18);
-      // USDT check
-    } else if (value == tokens.usdt) {
-      setDecimals(18);
-    }
+    setDecimals(getTokenDecimals(value))
 
     setSaveState((prevState) => ({ ...prevState, token: value }));
   };
@@ -196,13 +191,13 @@ export default function SaveAssetsCard() {
     }));
   };
 
-  // const handleFrequencyChange = (value: string) => {
-  //   const _frequency = Number(value);
-  //   setSaveState((prevState) => ({
-  //     ...prevState,
-  //     frequency: _frequency,
-  //   }));
-  // };
+  const handleFrequencyChange = (value: string) => {
+    const _frequency = Number(value);
+    setSaveState((prevState) => ({
+      ...prevState,
+      frequency: _frequency,
+    }));
+  };
 
   //   Save asset functionality
   const openThirdModal = () => {
@@ -214,7 +209,7 @@ export default function SaveAssetsCard() {
     createAutoSavings,
     addTokenToAutoSafe,
     hasCreatedAutoSafe,
-    // isLoading: autoSavingsLoading,
+    isLoading: autoSavingsLoading,
   } = useCreateAutoSavings({
     address: address as `0x${string}`,
     saveState,
@@ -366,7 +361,7 @@ export default function SaveAssetsCard() {
 
       const tokenBalance = (AvailableBalance[saveState.token] as bigint) || 0n;
 
-      setSelectedTokenBalance(Number(formatUnits(tokenBalance, 18)));
+      setSelectedTokenBalance(Number(formatUnits(tokenBalance, getTokenDecimals(saveState.token))));
       // console.log("token Balance: ", tokenBalance);
     }
   }, [saveState.token, address, AvailableBalance]);
@@ -535,19 +530,8 @@ export default function SaveAssetsCard() {
 
         {saveType === "auto" && (
           <>
-            <div className="flex flex-col items-center justify-center space-y-4 py-2 text-white">
-              <MemoComingSoonIcon className="w-[50%] h-[50vh] text-white" />
-              <h1 className="text-3xl font-bold my-2 text-white leading-tight">
-                We’re in the kitchen!
-              </h1>
-              <p className="text-center max-w-md text-muted-foreground">
-                We’re in the kitchen, putting the final touches on this feature.
-                We’ll let you know as soon as it’s ready! Continue saving for
-                now.
-              </p>
-            </div>
             {/* Autosave Tab section */}
-            {/* <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4">
               <div className="py-4 pb-6 border-b-[1px] border-[#FFFFFF21]">
                 <p className="font-[200] text-base">Choose savings method</p>
                 <div className="flex gap-2">
@@ -747,11 +731,11 @@ export default function SaveAssetsCard() {
                     )}
                   </div>
                 ))}
-            </div> */}
+            </div> 
           </>
         )}
 
-        {/* {selectedOption === "by-frequency" &&
+        {selectedOption === "by-frequency" &&
           saveType !== "one-time" &&
           (supportedTokens.filter(
             (token) => !autoSafeTokenOptions.includes(token)
@@ -777,7 +761,7 @@ export default function SaveAssetsCard() {
                 </div>
               </div>
             </>
-          ))} */}
+          ))}
 
         {saveType === "one-time" && (
           <div className="flex justify-end mt-5">
